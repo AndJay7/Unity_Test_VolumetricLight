@@ -18,7 +18,7 @@ With volume light
 - can be added to scene without real light source. Volume light is faked by using mesh with specific shader
 
 # Requirments
-- URP
+- Universal Render Pipeline
 - Active DepthTexture 
 
 # Current features
