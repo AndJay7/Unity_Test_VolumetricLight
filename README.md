@@ -1,4 +1,4 @@
-# Unity_Test_VolumetricLight
+# Non-RayMarching Volume Light
 Non-RayMarching Volume Light implementation
 
 # Idea
