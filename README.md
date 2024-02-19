@@ -16,6 +16,7 @@ With volume light
   
 # Pros
 - a lot of lighter then volumetric calculation
+- volume light is a lot of sharper and smooth
 - can be added to scene without real light source. Volume light is faked by using mesh with specific shader
 
 # Requirments
