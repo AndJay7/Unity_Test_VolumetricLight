@@ -3,8 +3,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace And.VisualEffects.VolumeLight
-{ 
-
+{
     [ExecuteInEditMode, SelectionBase]
     public class SpotVolumeLight : MonoBehaviour
     {
@@ -89,7 +88,7 @@ namespace And.VisualEffects.VolumeLight
 
         private void LateUpdate()
         {
-            if(ActiveUpdateMode == UpdateMode.Always)
+            if (ActiveUpdateMode == UpdateMode.Always)
                 ManualUpdate();
         }
 
