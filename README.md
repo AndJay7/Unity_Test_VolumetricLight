@@ -1,6 +1,4 @@
 # Non-RayMarching Volume Light
-Non-RayMarching Volume Light implementation
-
 # Idea
 General approach for creating Volume Light is using RayMarching methods to calculate intensity of light in defined point. This approach is computing heavy and generally can't be used on weaker hardware. Assuming a known shape of light, my idea is to use analitic/geometric approach to calculate approximate intensity of light in area.
 
