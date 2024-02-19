@@ -1,4 +1,3 @@
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -26,7 +25,7 @@ namespace And.VisualEffects.VolumeLight
         [SerializeField]
         private UpdateMode _updateMode = UpdateMode.Always;
         [Header("Parameters")]
-        [SerializeField, InspectorLabel("Light Data")]
+        [SerializeField]
         private ManualSpotLightData _manualData = new ManualSpotLightData();
 
         [SerializeField]
