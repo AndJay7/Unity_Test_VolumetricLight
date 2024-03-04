@@ -139,6 +139,31 @@ namespace And.VisualEffects.VolumeLight
             }
 
             rendererTransform.localScale = rendererScale;
+            UpdateRendererBounds();
+        }
+
+        private void UpdateRendererBounds()
+        {
+            Vector3 pointA = rendererTransform.position;
+            float rangeA = 0;
+            Vector3 pointB = rendererTransform.position + rendererTransform.forward * GetLightData().Range;
+            float rangeB = GetLightData().Range * Mathf.Sin(GetLightData().OuterAngle * Mathf.Deg2Rad / 2);
+
+            Vector3 a = pointB - pointA;
+            Vector3 sqrA = Vector3.Scale(a, a);
+            float dotA = Vector3.Dot(a, a);
+            Vector3 e = Vector3.one - sqrA / dotA;
+            e.x = Mathf.Sqrt(e.x);
+            e.y = Mathf.Sqrt(e.y);
+            e.z = Mathf.Sqrt(e.z);
+
+            Vector3 min = Vector3.Min(pointA - e * rangeA, pointB - e * rangeB);
+            Vector3 max = Vector3.Max(pointA + e * rangeA, pointB + e * rangeB);
+
+            Bounds bounds = new Bounds();
+            bounds.min = min;
+            bounds.max = max;
+            renderer.bounds = bounds;
         }
 
         private void UpdateMaterial(ISpotLightData lightData)
