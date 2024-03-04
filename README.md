@@ -29,7 +29,6 @@ With volume light
 
 # Known issues
 - halo effect on edge of Cone under some angles
-- Volume mesh can disappear, when camera is close. It is because MeshRenderer bounding box is don't taking care of Light range
 
 # To Do
 - additional volume shapes (sphere, box)
