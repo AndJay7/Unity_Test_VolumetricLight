@@ -42,7 +42,7 @@ namespace And.VisualEffects.VolumeLight
         private const string MESH_PROPERTY_COLOR = "_LightColor";
         private const float LIGHT_INTENSITY_NORMALIZE = 0.001f;
 
-        private void Start()
+        private void Awake()
         {
             CreateRenderer();
             InitializeRenderer();
@@ -50,6 +50,24 @@ namespace And.VisualEffects.VolumeLight
 
             Refresh();
             ManualUpdate();
+        }
+
+        private void OnEnable()
+        {
+            _rendererTransform.gameObject.SetActive(true);
+        }
+
+        private void OnDisable()
+        {
+            _rendererTransform.gameObject.SetActive(false);
+        }
+
+        private void OnDestroy()
+        {
+            if (Application.isPlaying)
+                Destroy(_rendererTransform.gameObject);
+            else
+                DestroyImmediate(_rendererTransform.gameObject);
         }
 
         private void LateUpdate()
@@ -60,9 +78,6 @@ namespace And.VisualEffects.VolumeLight
 
         private void CreateRenderer()
         {
-            if (_rendererTransform != null)
-                return;
-
             GameObject newObj = new GameObject();
             newObj.transform.SetParent(transform, false);
             newObj.layer = gameObject.layer;
@@ -72,10 +87,6 @@ namespace And.VisualEffects.VolumeLight
             _renderer = newObj.AddComponent<MeshRenderer>();
             MeshFilter meshFilter = newObj.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = Resources.Load<Mesh>(RESOURCE_MESH_NAME);
-
-#if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(newObj);
-#endif
         }
 
         private void InitializeRenderer()
