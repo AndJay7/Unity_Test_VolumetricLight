@@ -6,62 +6,30 @@ namespace And.VisualEffects.VolumeLight
     [ExecuteInEditMode, SelectionBase]
     public class SpotVolumeLight : MonoBehaviour
     {
-        private enum ControlMode
-        {
-            Manual = 0,
-            Light = 1,
-            Combined = 2,
-        }
-
         private enum UpdateMode
         {
+            [HideInInspector]
             None = 0,
             Always = 1,
             Manual = 2,
         }
 
         [SerializeField]
-        private ControlMode _controlMode = ControlMode.Light;
+        private UpdateMode _update = UpdateMode.Always;
         [SerializeField]
-        private UpdateMode _updateMode = UpdateMode.Always;
-        [Header("Parameters")]
+        private bool _manualSettings = false;
+
+        [SerializeField]
+        private ComponentURPSpotLightData _componentData = new ComponentURPSpotLightData();
         [SerializeField]
         private ManualSpotLightData _manualData = new ManualSpotLightData();
 
-        [SerializeField]
-        [HideInInspector]
-        private Transform rendererTransform = null;
-        [SerializeField]
-        [HideInInspector]
-        private new MeshRenderer renderer = null;
+        private Transform _rendererTransform = null;
+        private MeshRenderer _renderer = null;
+        private Light _light = null;
+        private Material _material = null;
 
-        private UpdateMode ActiveUpdateMode => Application.isPlaying ? _updateMode : UpdateMode.Always;
-
-        private ComponentURPSpotLightData ComponentData
-        {
-            get
-            {
-                if (_componentData == null)
-                    _componentData = new ComponentURPSpotLightData(GetComponent<Light>());
-                return _componentData;
-            }
-        }
-
-        private CombinedSpotLightData CombinedData
-        {
-            get
-            {
-                if (_combinedData == null)
-                {
-                    _combinedData = new CombinedSpotLightData(ComponentData, _manualData as ISpotLightData);
-                }
-                return _combinedData;
-            }
-        }
-
-        private Material _material;
-        private ComponentURPSpotLightData _componentData;
-        private CombinedSpotLightData _combinedData;
+        private UpdateMode ActiveUpdateMode => Application.isPlaying ? _update : UpdateMode.Always;
 
         private const string SHADER_NAME = "Hidden/And/VolumeLight/Cone";
         private const string RESOURCE_MESH_NAME = "VolumeLight/Cone";
@@ -72,16 +40,15 @@ namespace And.VisualEffects.VolumeLight
         private const string MESH_PROPERTY_POSITION = "_MeshConePosition";
         private const string MESH_PROPERTY_DIRECTION = "_MeshConeDirection";
         private const string MESH_PROPERTY_COLOR = "_LightColor";
+        private const float LIGHT_INTENSITY_NORMALIZE = 0.001f;
 
         private void Start()
         {
-            _componentData = new ComponentURPSpotLightData(GetComponent<Light>());
-            _combinedData = new CombinedSpotLightData(_componentData, _manualData);
-
             CreateRenderer();
             InitializeRenderer();
             InitializeMaterial();
 
+            Refresh();
             ManualUpdate();
         }
 
@@ -93,16 +60,16 @@ namespace And.VisualEffects.VolumeLight
 
         private void CreateRenderer()
         {
-            if (rendererTransform != null)
+            if (_rendererTransform != null)
                 return;
 
             GameObject newObj = new GameObject();
-            newObj.name = "LightVolumeRenderer";
             newObj.transform.SetParent(transform, false);
             newObj.layer = gameObject.layer;
+            newObj.hideFlags = HideFlags.HideAndDontSave;
 
-            rendererTransform = newObj.transform;
-            renderer = newObj.AddComponent<MeshRenderer>();
+            _rendererTransform = newObj.transform;
+            _renderer = newObj.AddComponent<MeshRenderer>();
             MeshFilter meshFilter = newObj.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = Resources.Load<Mesh>(RESOURCE_MESH_NAME);
 
@@ -113,9 +80,9 @@ namespace And.VisualEffects.VolumeLight
 
         private void InitializeRenderer()
         {
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.lightProbeUsage = LightProbeUsage.Off;
-            renderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
+            _renderer.shadowCastingMode = ShadowCastingMode.Off;
+            _renderer.lightProbeUsage = LightProbeUsage.Off;
+            _renderer.motionVectorGenerationMode = MotionVectorGenerationMode.ForceNoMotion;
         }
 
         private void InitializeMaterial()
@@ -123,14 +90,14 @@ namespace And.VisualEffects.VolumeLight
             Shader shader = Shader.Find(SHADER_NAME);
             _material = new Material(shader);
             _material.name = gameObject.name;
-            renderer.material = _material;
+            _renderer.material = _material;
         }
 
-        private void UpdateRenderer(bool isScalingAllowed)
+        private void UpdateRenderer(ISpotLightData lightData)
         {
             Vector3 rendererScale = Vector3.one;
 
-            if (!isScalingAllowed)
+            if (!lightData.IsScalingAllowed)
             {
                 Vector3 scale = transform.lossyScale;
                 rendererScale.x = 1 / scale.x;
@@ -138,16 +105,18 @@ namespace And.VisualEffects.VolumeLight
                 rendererScale.z = 1 / scale.z;
             }
 
-            rendererTransform.localScale = rendererScale;
-            UpdateRendererBounds();
+            _rendererTransform.localScale = rendererScale;
+            UpdateRendererBounds(lightData);
         }
 
-        private void UpdateRendererBounds()
+        private void UpdateRendererBounds(ISpotLightData lightData)
         {
-            Vector3 pointA = rendererTransform.position;
-            float rangeA = 0;
-            Vector3 pointB = rendererTransform.position + rendererTransform.forward * GetLightData().Range;
-            float rangeB = GetLightData().Range * Mathf.Sin(GetLightData().OuterAngle * Mathf.Deg2Rad / 2);
+            float coneRange = lightData.GetRange(_light);
+            float coneOuterAngle = lightData.GetOuterAngle(_light) * Mathf.Deg2Rad / 2;
+            Vector3 pointA = _rendererTransform.position;
+            float boxRangeA = 0;
+            Vector3 pointB = _rendererTransform.position + _rendererTransform.forward * coneRange;
+            float boxRangeB = coneRange * Mathf.Sin(coneOuterAngle);
 
             Vector3 a = pointB - pointA;
             Vector3 sqrA = Vector3.Scale(a, a);
@@ -157,30 +126,31 @@ namespace And.VisualEffects.VolumeLight
             e.y = Mathf.Sqrt(e.y);
             e.z = Mathf.Sqrt(e.z);
 
-            Vector3 min = Vector3.Min(pointA - e * rangeA, pointB - e * rangeB);
-            Vector3 max = Vector3.Max(pointA + e * rangeA, pointB + e * rangeB);
+            Vector3 min = Vector3.Min(pointA - e * boxRangeA, pointB - e * boxRangeB);
+            Vector3 max = Vector3.Max(pointA + e * boxRangeA, pointB + e * boxRangeB);
 
             Bounds bounds = new Bounds();
             bounds.min = min;
             bounds.max = max;
-            renderer.bounds = bounds;
+            _renderer.bounds = bounds;
         }
 
         private void UpdateMaterial(ISpotLightData lightData)
         {
             if (_material != null)
             {
-                float outerAngleCos = Mathf.Cos(lightData.OuterAngle * Mathf.Deg2Rad / 2);
+                float outerAngle = lightData.GetOuterAngle(_light) * Mathf.Deg2Rad / 2;
+                float outerAngleTan = Mathf.Tan(outerAngle);
+                float outerAngleCos = Mathf.Cos(outerAngle);
                 float outerAngleSqrCos = outerAngleCos * outerAngleCos;
 
-                float innerAngleCos = Mathf.Cos(lightData.InnerAngle * Mathf.Deg2Rad / 2);
+                float innerAngleCos = Mathf.Cos(lightData.GetInnerAngle(_light) * Mathf.Deg2Rad / 2);
                 float innerAngleSqrCos = innerAngleCos * innerAngleCos;
 
-                float height = lightData.Range;
+                float height = lightData.GetRange(_light);
 
-                float outerAngleTan = Mathf.Tan(lightData.OuterAngle * Mathf.Deg2Rad / 2);
 
-                Color lightColor = lightData.Color * lightData.Intensity;
+                Color lightColor = lightData.GetColor(_light) * lightData.GetIntensity(_light) * LIGHT_INTENSITY_NORMALIZE;
 
                 _material.SetVector(MESH_PROPERTY_POSITION, Vector3.zero);
                 _material.SetVector(MESH_PROPERTY_DIRECTION, Vector3.forward);
@@ -194,25 +164,24 @@ namespace And.VisualEffects.VolumeLight
 
         private ISpotLightData GetLightData()
         {
-            switch (_controlMode)
-            {
-                case ControlMode.Manual:
-                    return _manualData;
-                case ControlMode.Light:
-                    return ComponentData.IsValid ? ComponentData : _manualData;
-                case ControlMode.Combined:
-                    return CombinedData.IsValid ? CombinedData : _manualData;
-            }
-            return _manualData;
+            if (_manualSettings || _light == null)
+                return _manualData;
+            else
+                return _componentData;
         }
 
         public void ManualUpdate()
         {
             ISpotLightData lightData = GetLightData();
 
-            UpdateRenderer(lightData.IsScalingAllowed);
-            if (renderer.isVisible)
+            UpdateRenderer(lightData);
+            if (_renderer.isVisible)
                 UpdateMaterial(lightData);
+        }
+
+        public void Refresh()
+        {
+            _light = GetComponent<Light>();
         }
     }
 }

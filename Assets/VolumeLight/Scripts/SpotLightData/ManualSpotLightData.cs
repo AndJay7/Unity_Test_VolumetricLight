@@ -6,7 +6,7 @@ namespace And.VisualEffects.VolumeLight
     public class ManualSpotLightData : ISpotLightData
     {
         [SerializeField, Range(0,180)] 
-        private float _outerAngle = 30;
+        private float _outerAngle = 50;
         [SerializeField, Range(0, 180)]
         private float _innerAngle = 0;
         [SerializeField]
@@ -18,12 +18,11 @@ namespace And.VisualEffects.VolumeLight
         [SerializeField]
         private bool _isScalingAllowed = false;
 
-        public bool IsValid => true;
         public bool IsScalingAllowed => _isScalingAllowed;  
-        public float OuterAngle => _outerAngle;
-        public float InnerAngle => Mathf.Min(_innerAngle,OuterAngle);
-        public float Range => _range;
-        public Color Color => _color;
-        public float Intensity => _intensity;
+        public float GetOuterAngle(Light light) => _outerAngle;
+        public float GetInnerAngle(Light light) => Mathf.Min(_innerAngle, _outerAngle);
+        public float GetRange(Light light) => _range;
+        public Color GetColor(Light light) => _color;
+        public float GetIntensity(Light light) => _intensity;
     }
 }

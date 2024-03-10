@@ -4,12 +4,11 @@ namespace And.VisualEffects.VolumeLight
 {
     public interface ISpotLightData
     {
-        bool IsValid { get; }
         bool IsScalingAllowed { get; }
-        float OuterAngle { get; }
-        float InnerAngle { get; }        
-        float Range { get; }
-        Color Color { get; }
-        float Intensity { get; }
+        float GetOuterAngle(Light light);
+        float GetInnerAngle(Light light);
+        float GetRange(Light light);
+        Color GetColor(Light light);
+        float GetIntensity(Light light);
     }
 }
